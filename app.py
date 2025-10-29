@@ -4,7 +4,6 @@ from gtts import gTTS
 import base64
 import os
 
-
 # ==================== CẤU HÌNH TRANG ====================
 st.set_page_config(
     page_title="Thiền Hơi Thở",
@@ -12,7 +11,6 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed"
 )
-
 
 # ==================== CSS ====================
 st.markdown("""
@@ -22,11 +20,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
 # ==================== SESSION STATE ====================
 if 'audio_generated' not in st.session_state:
     st.session_state.audio_generated = False
-
 
 # ==================== FUNCTIONS ====================
 def generate_audio_file(text, filename):
@@ -47,7 +43,6 @@ def generate_audio_file(text, filename):
             return False
     return True
 
-
 def get_audio_base64(file_path):
     """Chuyển audio thành base64"""
     try:
@@ -56,7 +51,6 @@ def get_audio_base64(file_path):
             return base64.b64encode(data).decode()
     except:
         return None
-
 
 def pregenerate_audio_files():
     """Tạo sẵn tất cả file audio cần thiết"""
@@ -67,7 +61,8 @@ def pregenerate_audio_files():
         "hold.mp3": "Giữ hơi",
         "exhale.mp3": "Thở ra",
         "complete.mp3": "Hoàn thành. Chúc mừng bạn",
-        # Countdown numbers - CHỈ dùng cho giai đoạn chuẩn bị
+        "phase2.mp3": "Chuyển sang giai đoạn 2",
+        # Countdown numbers
         "countdown_10.mp3": "10",
         "countdown_9.mp3": "9",
         "countdown_8.mp3": "8",
@@ -86,11 +81,9 @@ def pregenerate_audio_files():
     
     st.session_state.audio_generated = True
 
-
 # ==================== GIAO DIỆN CHÍNH ====================
 st.title("🧘 Thiền Hơi Thở Cho Người Mới")
 st.markdown("### _Hướng dẫn hơi thở có giọng nói tiếng Việt_")
-
 
 # ==================== CÀI ĐẶT ====================
 st.markdown("---")
@@ -128,41 +121,123 @@ else:
     total_cycles = 0  # 0 = infinite
     st.info("♾️ Chế độ vô hạn: Thiền sẽ tiếp tục cho đến khi bạn nhấn Dừng")
 
-st.markdown("#### 🌬️ Thời gian hơi thở")
+# ==================== CHẾ ĐỘ 2 GIAI ĐOẠN ====================
+st.markdown("---")
+st.subheader("🔀 Chế Độ 2 Giai Đoạn Hít Thở")
+
+two_phase_mode = st.checkbox(
+    "🌊 Bật chế độ 2 giai đoạn",
+    value=False,
+    help="Chia thành 2 giai đoạn với cách thở khác nhau (ví dụ: Wim Hof Method)"
+)
+
+if two_phase_mode and not infinite_mode:
+    phase1_cycles = st.number_input(
+        "🌬️ Số chu kỳ Giai đoạn 1",
+        min_value=1,
+        max_value=total_cycles,
+        value=min(5, total_cycles),
+        step=1,
+        help="Số chu kỳ thở theo setup đầu tiên (ví dụ: thở nhanh, sâu)"
+    )
+    st.info(f"ℹ️ Giai đoạn 2 sẽ có {total_cycles - phase1_cycles} chu kỳ còn lại")
+elif two_phase_mode and infinite_mode:
+    phase1_cycles = st.number_input(
+        "🌬️ Số chu kỳ Giai đoạn 1",
+        min_value=1,
+        max_value=100,
+        value=10,
+        step=1,
+        help="Số chu kỳ thở theo setup đầu tiên, sau đó chuyển sang giai đoạn 2 vô hạn"
+    )
+else:
+    phase1_cycles = 0
+
+# ==================== GIAI ĐOẠN 1 ====================
+st.markdown("---")
+if two_phase_mode:
+    st.markdown("#### 🌬️ Giai Đoạn 1 - Thời gian hơi thở")
+else:
+    st.markdown("#### 🌬️ Thời gian hơi thở")
+
 col3, col4, col5 = st.columns(3)
 
 with col3:
     inhale_time = st.number_input(
-        "🌬️ Hít vào (giây)",
+        "🌬️ Hít vào (giây)" + (" - Phase 1" if two_phase_mode else ""),
         min_value=2,
         max_value=10,
         value=4,
-        step=1
+        step=1,
+        key="inhale1"
     )
 
 with col4:
     hold_time = st.number_input(
-        "⏸️ Giữ hơi (giây)",
+        "⏸️ Giữ hơi (giây)" + (" - Phase 1" if two_phase_mode else ""),
         min_value=0,
         max_value=10,
         value=4,
         step=1,
-        help="Thời gian giữ hơi sau khi hít vào (có thể để 0 để bỏ qua)"
+        help="Thời gian giữ hơi sau khi hít vào (có thể để 0 để bỏ qua)",
+        key="hold1"
     )
 
 with col5:
     exhale_time = st.number_input(
-        "💨 Thở ra (giây)",
+        "💨 Thở ra (giây)" + (" - Phase 1" if two_phase_mode else ""),
         min_value=2,
         max_value=10,
         value=6,
-        step=1
+        step=1,
+        key="exhale1"
     )
 
-# Hiển thị tổng thời gian 1 chu kỳ
 cycle_duration = inhale_time + hold_time + exhale_time
-st.info(f"⏱️ Tổng thời gian 1 chu kỳ: **{cycle_duration} giây** (Hít: {inhale_time}s + Giữ: {hold_time}s + Thở: {exhale_time}s)")
+st.info(f"⏱️ Tổng thời gian 1 chu kỳ (Giai đoạn 1): **{cycle_duration} giây** (Hít: {inhale_time}s + Giữ: {hold_time}s + Thở: {exhale_time}s)")
 
+# ==================== GIAI ĐOẠN 2 ====================
+if two_phase_mode:
+    st.markdown("#### 💨 Giai Đoạn 2 - Thời gian hơi thở")
+    
+    col6, col7, col8 = st.columns(3)
+    
+    with col6:
+        inhale_time2 = st.number_input(
+            "🌬️ Hít vào (giây) - Phase 2",
+            min_value=2,
+            max_value=10,
+            value=2,
+            step=1,
+            key="inhale2"
+        )
+    
+    with col7:
+        hold_time2 = st.number_input(
+            "⏸️ Giữ hơi (giây) - Phase 2",
+            min_value=0,
+            max_value=10,
+            value=0,
+            step=1,
+            key="hold2"
+        )
+    
+    with col8:
+        exhale_time2 = st.number_input(
+            "💨 Thở ra (giây) - Phase 2",
+            min_value=2,
+            max_value=10,
+            value=4,
+            step=1,
+            key="exhale2"
+        )
+    
+    cycle_duration2 = inhale_time2 + hold_time2 + exhale_time2
+    st.info(f"⏱️ Tổng thời gian 1 chu kỳ (Giai đoạn 2): **{cycle_duration2} giây** (Hít: {inhale_time2}s + Giữ: {hold_time2}s + Thở: {exhale_time2}s)")
+else:
+    inhale_time2 = inhale_time
+    hold_time2 = hold_time
+    exhale_time2 = exhale_time
 
 # ==================== TÙY CHỌN GIỌNG ĐỌC ====================
 st.markdown("---")
@@ -175,7 +250,6 @@ prepare_countdown_voice = st.checkbox(
 )
 
 st.info("ℹ️ **Trong lúc thiền**: Chỉ đọc 'Hít vào', 'Giữ hơi' và 'Thở ra' - KHÔNG đọc số đếm giây")
-
 
 # ==================== ÂM LƯỢNG ====================
 st.markdown("---")
@@ -201,11 +275,9 @@ with col_v2:
         step=5
     ) / 100
 
-
 # ==================== NHẠC NỀN ====================
 st.markdown("---")
 
-# Check if music file exists and get base64
 music_b64 = None
 if os.path.exists("meditation_music.mp3"):
     st.success("✅ Nhạc nền đã sẵn sàng - sẽ tự động phát khi bắt đầu thiền")
@@ -215,7 +287,6 @@ if os.path.exists("meditation_music.mp3"):
         st.audio("meditation_music.mp3", format="audio/mp3")
 else:
     st.warning("⚠️ Chưa có file nhạc nền. Upload file MP3 bên dưới.")
-
 
 # ==================== CHUẨN BỊ AUDIO ====================
 if not st.session_state.audio_generated:
@@ -231,6 +302,7 @@ else:
     hold_b64 = get_audio_base64("audio/hold.mp3")
     exhale_b64 = get_audio_base64("audio/exhale.mp3")
     complete_b64 = get_audio_base64("audio/complete.mp3")
+    phase2_b64 = get_audio_base64("audio/phase2.mp3")
     
     # Load countdown audio
     countdown_audios = {}
@@ -242,7 +314,6 @@ else:
     # ==================== APP THIỀN (HTML COMPONENT) ====================
     st.markdown("---")
     
-    # Convert countdown audios to JavaScript object
     countdown_js = "{\n"
     for num, b64 in countdown_audios.items():
         countdown_js += f'        {num}: "data:audio/mp3;base64,{b64}",\n'
@@ -294,6 +365,12 @@ else:
                 color: white;
             }}
             
+            .phase2-transition {{
+                background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+                color: white;
+                font-size: 36px;
+            }}
+            
             @keyframes pulse {{
                 0%, 100% {{ transform: scale(1); }}
                 50% {{ transform: scale(1.05); }}
@@ -319,6 +396,16 @@ else:
                 background: #f0f2f6;
                 border-radius: 10px;
                 margin: 10px 0;
+            }}
+            
+            .phase-badge {{
+                display: inline-block;
+                background: #3498db;
+                color: white;
+                padding: 5px 15px;
+                border-radius: 20px;
+                font-size: 16px;
+                margin-left: 10px;
             }}
             
             button {{
@@ -356,16 +443,6 @@ else:
                 height: 30px;
                 border-radius: 10px;
             }}
-            
-            .infinite-symbol {{
-                font-size: 40px;
-                animation: rotate 3s linear infinite;
-            }}
-            
-            @keyframes rotate {{
-                from {{ transform: rotate(0deg); }}
-                to {{ transform: rotate(360deg); }}
-            }}
         </style>
     </head>
     <body>
@@ -379,58 +456,58 @@ else:
         </div>
         
         <script>
-            // Audio files (voice)
             const audios = {{
                 prepare: "data:audio/mp3;base64,{prepare_b64}",
                 ready: "data:audio/mp3;base64,{ready_b64}",
                 inhale: "data:audio/mp3;base64,{inhale_b64}",
                 hold: "data:audio/mp3;base64,{hold_b64}",
                 exhale: "data:audio/mp3;base64,{exhale_b64}",
-                complete: "data:audio/mp3;base64,{complete_b64}"
+                complete: "data:audio/mp3;base64,{complete_b64}",
+                phase2: "data:audio/mp3;base64,{phase2_b64}"
             }};
             
-            // Countdown numbers audio - CHỈ dùng cho giai đoạn chuẩn bị
             const countdownAudios = {countdown_js};
             
-            // Background music
             const bgMusicData = {"'data:audio/mp3;base64," + music_b64 + "'" if music_b64 else "null"};
             let bgMusic = null;
             
-            // Settings
             const settings = {{
                 prepareTime: {prepare_time},
+                // Phase 1 settings
                 inhaleTime: {inhale_time},
                 holdTime: {hold_time},
                 exhaleTime: {exhale_time},
-                totalCycles: {total_cycles},  // 0 = infinite
+                // Phase 2 settings
+                inhaleTime2: {inhale_time2},
+                holdTime2: {hold_time2},
+                exhaleTime2: {exhale_time2},
+                totalCycles: {total_cycles},
+                twoPhaseMode: {"true" if two_phase_mode else "false"},
+                phase1Cycles: {phase1_cycles},
                 voiceVolume: {voice_volume},
                 musicVolume: {music_volume},
                 prepareCountdownVoice: {"true" if prepare_countdown_voice else "false"}
             }};
             
             const isInfiniteMode = settings.totalCycles === 0;
-            
-            // State
-            let currentCycle = 0;
             let currentPhase = 'idle';
+            let currentCycle = 0;
+            let currentBreathingPhase = 1; // 1 hoặc 2
             let countdown = 0;
             let intervalId = null;
             
-            // Initialize background music
             if (bgMusicData) {{
                 bgMusic = new Audio(bgMusicData);
                 bgMusic.loop = true;
                 bgMusic.volume = settings.musicVolume;
             }}
             
-            // Play audio
             function playAudio(type) {{
                 const audio = new Audio(audios[type]);
                 audio.volume = settings.voiceVolume;
                 audio.play().catch(e => console.log('Audio play prevented:', e));
             }}
             
-            // Play countdown number - CHỈ cho giai đoạn chuẩn bị
             function playCountdownNumber(number) {{
                 if (countdownAudios[number]) {{
                     const audio = new Audio(countdownAudios[number]);
@@ -439,7 +516,6 @@ else:
                 }}
             }}
             
-            // Play background music
             function playBgMusic() {{
                 if (bgMusic) {{
                     bgMusic.currentTime = 0;
@@ -447,7 +523,6 @@ else:
                 }}
             }}
             
-            // Stop background music
             function stopBgMusic() {{
                 if (bgMusic) {{
                     bgMusic.pause();
@@ -455,14 +530,12 @@ else:
                 }}
             }}
             
-            // Update display
             function updateDisplay(status, cycle, progress) {{
                 document.getElementById('status-display').innerHTML = status;
                 document.getElementById('cycle-display').innerHTML = cycle || '';
                 document.getElementById('progress-display').innerHTML = progress || '';
             }}
             
-            // Countdown function - CHỈ đọc số trong giai đoạn chuẩn bị
             function runCountdown(seconds, callback, enableVoice = false) {{
                 countdown = seconds;
                 
@@ -476,12 +549,10 @@ else:
                     
                     countdown--;
                     
-                    // CHỈ đọc số khi enableVoice = true (giai đoạn chuẩn bị)
                     if (enableVoice && countdown >= 1 && countdown <= 10) {{
                         playCountdownNumber(countdown);
                     }}
                     
-                    // Update countdown display
                     const statusDiv = document.getElementById('status-display');
                     if (statusDiv) {{
                         const timerSpan = statusDiv.querySelector('.countdown-timer');
@@ -495,17 +566,14 @@ else:
                 }}, 1000);
             }}
             
-            // Start meditation
             function startMeditation() {{
                 console.log('Starting meditation preparation...');
-                
-                // Disable start button
                 document.getElementById('startBtn').disabled = true;
                 
                 currentPhase = 'prepare';
                 currentCycle = 0;
+                currentBreathingPhase = 1;
                 
-                // Show preparation phase
                 updateDisplay(
                     '<div class="big-status prepare">Chuẩn Bị Tinh Thần 🧘<div class="countdown-timer">' + settings.prepareTime + '</div></div>',
                     '<div class="cycle-info">Hãy ngồi thoải mái và thư giãn...</div>',
@@ -514,49 +582,75 @@ else:
                 
                 playAudio('prepare');
                 
-                // Run preparation countdown WITH voice (đọc số 10, 9, 8...)
                 runCountdown(settings.prepareTime, () => {{
-                    // Play "ready" sound
                     playAudio('ready');
                     
-                    // Show "Chuẩn bị bắt đầu..." và ĐỢI 2 GIÂY
                     updateDisplay(
                         '<div class="big-status prepare">Chuẩn Bị Bắt Đầu... 🌟</div>',
                         '<div class="cycle-info">Đang khởi động nhạc nền...</div>',
                         ''
                     );
                     
-                    // Start background music
                     playBgMusic();
                     
-                    // ĐỢI 2 GIÂY trước khi bắt đầu thiền
                     setTimeout(() => {{
                         breathingCycle();
                     }}, 2000);
                 }}, settings.prepareCountdownVoice);
             }}
             
-            // Breathing cycle - KHÔNG đọc số, chỉ hiển thị và đọc "Hít vào"/"Giữ hơi"/"Thở ra"
+            function checkPhaseTransition() {{
+                // Kiểm tra xem có cần chuyển sang phase 2 không
+                if (settings.twoPhaseMode && currentBreathingPhase === 1 && currentCycle >= settings.phase1Cycles) {{
+                    currentBreathingPhase = 2;
+                    
+                    // Hiển thị thông báo chuyển phase
+                    updateDisplay(
+                        '<div class="big-status phase2-transition">🌊 Chuyển Sang Giai Đoạn 2 🌊</div>',
+                        '<div class="cycle-info">Thay đổi nhịp thở...</div>',
+                        ''
+                    );
+                    
+                    playAudio('phase2');
+                    
+                    // Đợi 3 giây rồi tiếp tục
+                    setTimeout(() => {{
+                        breathingCycle();
+                    }}, 3000);
+                    
+                    return true; // Đã chuyển phase
+                }}
+                return false; // Không chuyển phase
+            }}
+            
             function breathingCycle() {{
                 if (currentPhase === 'idle') return;
                 
                 currentCycle++;
                 
-                // Check if we should stop (only for non-infinite mode)
+                // Kiểm tra xem có cần chuyển phase không
+                if (checkPhaseTransition()) return;
+                
                 if (!isInfiniteMode && currentCycle > settings.totalCycles) {{
                     completeMeditation();
                     return;
                 }}
                 
-                // Prepare cycle display text
+                // Chọn timing dựa trên phase hiện tại
+                const inhaleTime = currentBreathingPhase === 1 ? settings.inhaleTime : settings.inhaleTime2;
+                const holdTime = currentBreathingPhase === 1 ? settings.holdTime : settings.holdTime2;
+                const exhaleTime = currentBreathingPhase === 1 ? settings.exhaleTime : settings.exhaleTime2;
+                
+                // Hiển thị phase badge
+                const phaseBadge = settings.twoPhaseMode ? '<span class="phase-badge">Giai đoạn ' + currentBreathingPhase + '</span>' : '';
+                
                 let cycleText = '';
                 if (isInfiniteMode) {{
-                    cycleText = '<div class="cycle-info">Chu kỳ: ' + currentCycle + ' <span class="infinite-symbol">♾️</span></div>';
+                    cycleText = '<div class="cycle-info">Chu kỳ: ' + currentCycle + ' ♾️ ' + phaseBadge + '</div>';
                 }} else {{
-                    cycleText = '<div class="cycle-info">Chu kỳ: ' + currentCycle + '/' + settings.totalCycles + '</div>';
+                    cycleText = '<div class="cycle-info">Chu kỳ: ' + currentCycle + '/' + settings.totalCycles + ' ' + phaseBadge + '</div>';
                 }}
                 
-                // Prepare progress bar
                 let progressBar = '';
                 if (isInfiniteMode) {{
                     progressBar = '<div style="text-align:center; font-size:40px;">♾️</div>';
@@ -564,64 +658,54 @@ else:
                     progressBar = '<progress value="' + currentCycle + '" max="' + settings.totalCycles + '"></progress>';
                 }}
                 
-                // Inhale phase - HIỂN THỊ số giây nhưng KHÔNG ĐỌC
+                // Inhale phase
                 currentPhase = 'inhale';
                 
                 updateDisplay(
-                    '<div class="big-status inhale">HÍT VÀO 🌬️<div class="countdown-timer">' + settings.inhaleTime + '</div></div>',
+                    '<div class="big-status inhale">HÍT VÀO 🌬️<div class="countdown-timer">' + inhaleTime + '</div></div>',
                     cycleText,
                     progressBar
                 );
                 
-                // CHỈ đọc "Hít vào" - KHÔNG đọc số
                 playAudio('inhale');
                 
-                // runCountdown với enableVoice = FALSE (không đọc số)
-                runCountdown(settings.inhaleTime, () => {{
-                    // Hold phase - HIỂN THỊ số giây nhưng KHÔNG ĐỌC
-                    if (settings.holdTime > 0) {{
+                runCountdown(inhaleTime, () => {{
+                    if (holdTime > 0) {{
                         currentPhase = 'hold';
                         
                         updateDisplay(
-                            '<div class="big-status hold">GIỮ HƠI ⏸️<div class="countdown-timer">' + settings.holdTime + '</div></div>',
+                            '<div class="big-status hold">GIỮ HƠI ⏸️<div class="countdown-timer">' + holdTime + '</div></div>',
                             cycleText,
                             progressBar
                         );
                         
-                        // CHỈ đọc "Giữ hơi" - KHÔNG đọc số
                         playAudio('hold');
                         
-                        // runCountdown với enableVoice = FALSE (không đọc số)
-                        runCountdown(settings.holdTime, () => {{
-                            exhalePhase(cycleText, progressBar);
+                        runCountdown(holdTime, () => {{
+                            exhalePhase(cycleText, progressBar, exhaleTime);
                         }}, false);
                     }} else {{
-                        // Nếu holdTime = 0, bỏ qua giai đoạn giữ hơi
-                        exhalePhase(cycleText, progressBar);
+                        exhalePhase(cycleText, progressBar, exhaleTime);
                     }}
                 }}, false);
             }}
             
-            // Exhale phase function
-            function exhalePhase(cycleText, progressBar) {{
+            function exhalePhase(cycleText, progressBar, exhaleTime) {{
                 currentPhase = 'exhale';
                 
                 updateDisplay(
-                    '<div class="big-status exhale">THỞ RA 💨<div class="countdown-timer">' + settings.exhaleTime + '</div></div>',
+                    '<div class="big-status exhale">THỞ RA 💨<div class="countdown-timer">' + exhaleTime + '</div></div>',
                     cycleText,
                     progressBar
                 );
                 
-                // CHỈ đọc "Thở ra" - KHÔNG đọc số
                 playAudio('exhale');
                 
-                // runCountdown với enableVoice = FALSE (không đọc số)
-                runCountdown(settings.exhaleTime, () => {{
+                runCountdown(exhaleTime, () => {{
                     breathingCycle();
                 }}, false);
             }}
             
-            // Complete meditation
             function completeMeditation() {{
                 currentPhase = 'complete';
                 
@@ -633,7 +717,6 @@ else:
                 
                 playAudio('complete');
                 
-                // Fade out background music
                 if (bgMusic) {{
                     let fadeOutInterval = setInterval(() => {{
                         if (bgMusic.volume > 0.05) {{
@@ -649,7 +732,6 @@ else:
                     currentPhase = 'idle';
                     updateDisplay('', '', '');
                     
-                    // Reset music volume and re-enable start button
                     if (bgMusic) {{
                         bgMusic.volume = settings.musicVolume;
                     }}
@@ -657,17 +739,16 @@ else:
                 }}, 3000);
             }}
             
-            // Stop meditation
             function stopMeditation() {{
                 if (intervalId) clearInterval(intervalId);
                 
-                // Stop background music immediately
                 stopBgMusic();
                 
                 const cyclesCompleted = currentCycle;
                 
                 currentPhase = 'idle';
                 currentCycle = 0;
+                currentBreathingPhase = 1;
                 countdown = 0;
                 
                 let stopMessage = '⏸️ Đã dừng';
@@ -684,7 +765,6 @@ else:
                 setTimeout(() => {{
                     updateDisplay('', '', '');
                     
-                    // Reset music volume and re-enable start button
                     if (bgMusic) {{
                         bgMusic.volume = settings.musicVolume;
                     }}
@@ -696,9 +776,7 @@ else:
     </html>
     """
     
-    # Render HTML component
     components.html(meditation_html, height=600, scrolling=False)
-
 
 # ==================== UPLOAD NHẠC NỀN ====================
 st.markdown("---")
@@ -728,30 +806,56 @@ with st.expander("🎵 Upload Nhạc Nền"):
                 f.write(uploaded_music.getbuffer())
             st.success(f"✅ Đã lưu nhạc nền ({file_size:.1f} MB)! Refresh trang để áp dụng.")
 
-
-# ==================== HƯỚNG DẪN NÉN NHẠC ====================
-with st.expander("📖 Hướng Dẫn Nén File MP3"):
+# ==================== KỸ THUẬT THỞ 2 GIAI ĐOẠN ====================
+with st.expander("🌊 Kỹ Thuật Thở 2 Giai Đoạn - Ví Dụ"):
     st.markdown("""
-    ### Cách nén file MP3 xuống < 5 MB (tối ưu cho tự động phát):
+    ### Wim Hof Method (Phổ biến nhất):
     
-    **Online Converter (Dễ nhất):**
-    - [FreeConvert Audio Compressor](https://www.freeconvert.com/audio-compressor)
-    - Upload file → Target: 5 MB → Bitrate: 96 kbps → Convert
+    **Giai đoạn 1 - Hyperventilation (30-40 chu kỳ):**
+    - Hít vào: 2 giây (sâu, đầy)
+    - Giữ hơi: 0 giây
+    - Thở ra: 2 giây (thả lỏng)
+    - Mục đích: Tăng oxygen, giảm CO2
     
-    **FFmpeg (Nâng cao):**
-    ```
-    ffmpeg -i input.mp3 -b:a 96k -ac 1 output.mp3
-    ```
+    **Giai đoạn 2 - Retention (1-3 chu kỳ):**
+    - Hít vào: 4 giây (đầy phổi)
+    - Giữ hơi: 15-60 giây (càng lâu càng tốt)
+    - Thở ra: 6 giây (từ từ)
+    - Mục đích: Giữ oxygen, tăng CO2
     
-    **Khuyến nghị cho nhạc thiền:**
-    - Bitrate: 96 kbps (đủ cho nhạc nền)
-    - Mono (1 channel)
-    - Độ dài: 10-15 phút (vừa đủ cho 1 session)
+    ---
+    
+    ### Pranayama 2 Phases:
+    
+    **Giai đoạn 1 - Kapalabhati (20-30 chu kỳ):**
+    - Hít vào: 1 giây (nhanh)
+    - Giữ hơi: 0 giây
+    - Thở ra: 1 giây (mạnh, bụng co)
+    - Mục đích: Làm sạch hệ hô hấp
+    
+    **Giai đoạn 2 - Nadi Shodhana (10-15 chu kỳ):**
+    - Hít vào: 4 giây (chậm)
+    - Giữ hơi: 4 giây
+    - Thở ra: 6 giây (chậm)
+    - Mục đích: Cân bằng năng lượng
+    
+    ---
+    
+    ### Box + Extended (Cho người mới):
+    
+    **Giai đoạn 1 - Warm-up (5-10 chu kỳ):**
+    - Hít vào: 4 giây
+    - Giữ hơi: 2 giây
+    - Thở ra: 4 giây
+    
+    **Giai đoạn 2 - Deep practice (10-20 chu kỳ):**
+    - Hít vào: 4 giây
+    - Giữ hơi: 4 giây
+    - Thở ra: 6 giây
     """)
 
-
 # ==================== KỸ THUẬT THỞ PHỔ BIẾN ====================
-with st.expander("🧘 Kỹ Thuật Thở Phổ Biến"):
+with st.expander("🧘 Kỹ Thuật Thở Phổ Biến (1 Giai Đoạn)"):
     st.markdown("""
     ### Các tỷ lệ hơi thở phổ biến:
     
@@ -767,12 +871,6 @@ with st.expander("🧘 Kỹ Thuật Thở Phổ Biến"):
     - Thở ra: 8 giây
     - Phù hợp cho: Thư giãn sâu, ngủ ngon
     
-    **Wim Hof Basic (deep-0-quick):**
-    - Hít vào: 2 giây (sâu)
-    - Giữ hơi: 0 giây
-    - Thở ra: 2 giây (nhanh)
-    - Phù hợp cho: Năng lượng, miễn dịch
-    
     **Relaxation (4-0-6):**
     - Hít vào: 4 giây
     - Giữ hơi: 0 giây
@@ -780,7 +878,5 @@ with st.expander("🧘 Kỹ Thuật Thở Phổ Biến"):
     - Phù hợp cho: Người mới, thư giãn nhẹ
     """)
 
-
-# ==================== THÔNG TIN ====================
 st.markdown("---")
-st.caption("✨ Ứng dụng Thiền Hơi Thở v5.0 | Hít vào - Giữ hơi - Thở ra 🧘")
+st.caption("✨ Ứng dụng Thiền Hơi Thở v6.0 - Chế độ 2 giai đoạn | Hít vào - Giữ hơi - Thở ra 🧘")
